@@ -1,7 +1,8 @@
-use crate::model::NoteModel;
 use chrono::Utc;
 use sqlx::{Error, PgPool};
 use uuid::Uuid;
+
+use crate::models::NoteModel;
 
 pub struct NoteRepository {
     pub db_pool: PgPool,

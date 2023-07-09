@@ -1,12 +1,10 @@
-use std::sync::Arc;
-
 use actix_web::{delete, get, patch, post, web, HttpResponse, Responder};
 
 use serde_json::json;
 
 use crate::{
     schema::{CreateNoteSchema, UpdateNoteSchema},
-    service::NoteService,
+    AppState,
 };
 
 #[get("/healthchecker")]
@@ -17,8 +15,8 @@ async fn health_checker_handler() -> impl Responder {
 }
 
 #[get("/notes")]
-async fn get_notes(service: web::Data<Arc<NoteService>>) -> impl Responder {
-    let query_result = service.get_notes().await;
+async fn get_notes(state: web::Data<AppState>) -> impl Responder {
+    let query_result = state.note_service.get_notes().await;
 
     if query_result.is_err() {
         let message = "Something bad happened while fetching all note items";
@@ -39,9 +37,10 @@ async fn get_notes(service: web::Data<Arc<NoteService>>) -> impl Responder {
 #[post("/notes")]
 async fn create_note_handler(
     body: web::Json<CreateNoteSchema>,
-    service: web::Data<Arc<NoteService>>,
+    state: web::Data<AppState>,
 ) -> impl Responder {
-    let query_result = service
+    let query_result = state
+        .note_service
         .create_note(&body.title.to_string(), &body.content.to_string())
         .await;
 
@@ -70,11 +69,11 @@ async fn create_note_handler(
 #[get("/notes/{id}")]
 async fn get_note_handler(
     path: web::Path<uuid::Uuid>,
-    service: web::Data<Arc<NoteService>>,
+    state: web::Data<AppState>,
 ) -> impl Responder {
     let note_id = path.into_inner();
 
-    let query_result = service.get_note_id(note_id).await;
+    let query_result = state.note_service.get_note_id(note_id).await;
 
     match query_result {
         Ok(note) => {
@@ -96,11 +95,11 @@ async fn get_note_handler(
 async fn edit_note_handler(
     path: web::Path<uuid::Uuid>,
     body: web::Json<UpdateNoteSchema>,
-    service: web::Data<Arc<NoteService>>,
+    state: web::Data<AppState>,
 ) -> impl Responder {
     let note_id = path.into_inner();
 
-    let query_result = service.get_note_id(note_id).await;
+    let query_result = state.note_service.get_note_id(note_id).await;
 
     if query_result.is_err() {
         let message = format!("Note with ID: {} not found", note_id);
@@ -110,7 +109,8 @@ async fn edit_note_handler(
 
     let note = query_result.unwrap();
 
-    let query_result = service
+    let query_result = state
+        .note_service
         .update_note(
             note_id,
             &body.title.to_owned().to_string(),
@@ -137,26 +137,14 @@ async fn edit_note_handler(
 #[delete("/notes/{id}")]
 async fn delete_note_handler(
     path: web::Path<uuid::Uuid>,
-    service: web::Data<Arc<NoteService>>,
+    state: web::Data<AppState>,
 ) -> impl Responder {
     let note_id = path.into_inner();
 
-    if let Err(err) = service.delete_note(note_id).await {
+    if let Err(err) = state.note_service.delete_note(note_id).await {
         log::error!("Failed to delete note: {:?}", err);
         return HttpResponse::InternalServerError().finish();
     }
 
     HttpResponse::NoContent().finish()
-}
-
-pub fn config(conf: &mut web::ServiceConfig) {
-    let scope = web::scope("/api")
-        .service(health_checker_handler)
-        .service(get_notes)
-        .service(create_note_handler)
-        .service(get_note_handler)
-        .service(edit_note_handler)
-        .service(delete_note_handler);
-
-    conf.service(scope);
 }

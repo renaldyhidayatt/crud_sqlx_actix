@@ -3,7 +3,7 @@ use std::sync::Arc;
 use sqlx::Error;
 use uuid::Uuid;
 
-use crate::{model::NoteModel, repository::NoteRepository};
+use crate::{models::NoteModel, repository::NoteRepository};
 
 #[derive(Clone)]
 pub struct NoteService {

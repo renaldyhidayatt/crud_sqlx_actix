@@ -4,19 +4,29 @@ use actix_cors::Cors;
 use actix_web::middleware::Logger;
 use actix_web::web::Data;
 use actix_web::{http::header, App, HttpServer};
+use config::Config;
 use dotenv::dotenv;
+
+use repository::{NoteRepository, UserRepository};
+use service::{NoteService, UserService};
+
 use sqlx::postgres::PgPoolOptions;
-use sqlx::PgPool;
 
-use crate::handler::health_checker_handler;
-use crate::repository::NoteRepository;
-use crate::service::NoteService;
-
+mod config;
 mod handler;
-mod model;
+mod middleware;
+mod response;
+
+mod models;
 mod repository;
 mod schema;
 mod service;
+
+pub struct AppState {
+    pub user_service: Arc<UserService>,
+    pub note_service: Arc<NoteService>,
+    pub env: Config,
+}
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -26,11 +36,11 @@ async fn main() -> std::io::Result<()> {
 
     dotenv().ok();
     env_logger::init();
+    let config = Config::init();
 
-    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL is not set");
     let db_pool = match PgPoolOptions::new()
         .max_connections(10)
-        .connect(&database_url)
+        .connect(&config.database_url)
         .await
     {
         Ok(pool) => {
@@ -46,8 +56,14 @@ async fn main() -> std::io::Result<()> {
     let note_repository = NoteRepository {
         db_pool: db_pool.clone(),
     };
-    let shared_repository: Arc<NoteRepository> = Arc::new(note_repository);
-    let note_service = NoteService::new(shared_repository.clone());
+    let note_repository_shared: Arc<NoteRepository> = Arc::new(note_repository);
+    let note_service = NoteService::new(note_repository_shared.clone());
+
+    let user_repository = UserRepository {
+        db_pool: db_pool.clone(),
+    };
+    let user_repository_shared: Arc<UserRepository> = Arc::new(user_repository);
+    let user_service = UserService::new(user_repository_shared.clone());
 
     println!("🚀 Server started successfully");
 
@@ -64,7 +80,11 @@ async fn main() -> std::io::Result<()> {
 
         App::new()
             .configure(handler::config)
-            .app_data(Data::new(Arc::new(note_service.clone())))
+            .app_data(Data::new(AppState {
+                env: config.clone(),
+                user_service: Arc::new(user_service.clone()),
+                note_service: Arc::new(note_service.clone()),
+            }))
             .wrap(cors)
             .wrap(Logger::default())
     })
