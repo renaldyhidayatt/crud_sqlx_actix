@@ -7,7 +7,7 @@ use jsonwebtoken::{decode, DecodingKey, Validation};
 
 use crate::response::ErrorResponse;
 use crate::schema::TokenClaims;
-use crate::AppState;
+use crate::service_register::ServiceRegister;
 
 pub struct JwtMiddleware {
     pub user_id: uuid::Uuid,
@@ -17,7 +17,7 @@ impl FromRequest for JwtMiddleware {
     type Error = ActixWebError;
     type Future = Ready<Result<Self, Self::Error>>;
     fn from_request(req: &HttpRequest, _: &mut Payload) -> Self::Future {
-        let data = req.app_data::<web::Data<AppState>>().unwrap();
+        let data = req.app_data::<web::Data<ServiceRegister>>().unwrap();
 
         let token = req
             .cookie("token")

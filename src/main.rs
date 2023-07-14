@@ -9,8 +9,6 @@ mod schema;
 mod service;
 mod service_register;
 
-use std::sync::Arc;
-
 use crate::service_register::ServiceRegister;
 use actix_cors::Cors;
 use actix_web::middleware::Logger;
@@ -18,17 +16,6 @@ use actix_web::web::Data;
 use actix_web::{http::header, App, HttpServer};
 use config::{Config, ConnectionManager};
 use dotenv::dotenv;
-
-use repository::{NoteRepository, UserRepository};
-use service::{NoteService, UserService};
-
-use sqlx::postgres::PgPoolOptions;
-
-pub struct AppState {
-    pub user_service: Arc<UserService>,
-    pub note_service: Arc<NoteService>,
-    pub env: Config,
-}
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

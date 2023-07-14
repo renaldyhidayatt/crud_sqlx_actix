@@ -5,7 +5,6 @@ use serde_json::json;
 use crate::{
     schema::{CreateNoteSchema, UpdateNoteSchema},
     service_register::ServiceRegister,
-    AppState,
 };
 
 #[get("/healthchecker")]
