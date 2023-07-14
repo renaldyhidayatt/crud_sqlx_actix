@@ -1,9 +1,10 @@
+use crate::config::ConnectionPool;
 use crate::models::UserModel;
-use sqlx::{Error, PgPool, Row};
+use sqlx::{Error, Row};
 use uuid::Uuid;
 
 pub struct UserRepository {
-    pub db_pool: PgPool,
+    pub db_pool: ConnectionPool,
 }
 
 impl UserRepository {

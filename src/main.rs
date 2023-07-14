@@ -1,17 +1,3 @@
-use std::sync::Arc;
-
-use actix_cors::Cors;
-use actix_web::middleware::Logger;
-use actix_web::web::Data;
-use actix_web::{http::header, App, HttpServer};
-use config::Config;
-use dotenv::dotenv;
-
-use repository::{NoteRepository, UserRepository};
-use service::{NoteService, UserService};
-
-use sqlx::postgres::PgPoolOptions;
-
 mod config;
 mod handler;
 mod middleware;
@@ -21,6 +7,22 @@ mod models;
 mod repository;
 mod schema;
 mod service;
+mod service_register;
+
+use std::sync::Arc;
+
+use crate::service_register::ServiceRegister;
+use actix_cors::Cors;
+use actix_web::middleware::Logger;
+use actix_web::web::Data;
+use actix_web::{http::header, App, HttpServer};
+use config::{Config, ConnectionManager};
+use dotenv::dotenv;
+
+use repository::{NoteRepository, UserRepository};
+use service::{NoteService, UserService};
+
+use sqlx::postgres::PgPoolOptions;
 
 pub struct AppState {
     pub user_service: Arc<UserService>,
@@ -38,34 +40,17 @@ async fn main() -> std::io::Result<()> {
     env_logger::init();
     let config = Config::init();
 
-    let db_pool = match PgPoolOptions::new()
-        .max_connections(10)
-        .connect(&config.database_url)
-        .await
-    {
-        Ok(pool) => {
-            println!("✅Connection to the database is successful!");
-            pool
-        }
-        Err(err) => {
-            println!("🔥 Failed to connect to the database: {:?}", err);
-            std::process::exit(1);
-        }
-    };
+    let db_pool =
+        match ConnectionManager::new_pool(&config.database_url, config.run_migrations).await {
+            Ok(pool) => pool,
+            Err(err) => {
+                eprintln!("Error initializing database connection pool: {}", err);
+                return Ok(());
+            }
+        };
 
-    let note_repository = NoteRepository {
-        db_pool: db_pool.clone(),
-    };
-    let note_repository_shared: Arc<NoteRepository> = Arc::new(note_repository);
-    let note_service = NoteService::new(note_repository_shared.clone());
-
-    let user_repository = UserRepository {
-        db_pool: db_pool.clone(),
-    };
-    let user_repository_shared: Arc<UserRepository> = Arc::new(user_repository);
-    let user_service = UserService::new(user_repository_shared.clone());
-
-    println!("🚀 Server started successfully");
+    let port = config.port;
+    let service_register = ServiceRegister::new(db_pool, config);
 
     HttpServer::new(move || {
         let cors = Cors::default()
@@ -80,15 +65,11 @@ async fn main() -> std::io::Result<()> {
 
         App::new()
             .configure(handler::config)
-            .app_data(Data::new(AppState {
-                env: config.clone(),
-                user_service: Arc::new(user_service.clone()),
-                note_service: Arc::new(note_service.clone()),
-            }))
+            .app_data(Data::new(service_register.clone()))
             .wrap(cors)
             .wrap(Logger::default())
     })
-    .bind(("127.0.0.1", 8000))?
+    .bind(("127.0.0.1", port))?
     .run()
     .await
 }

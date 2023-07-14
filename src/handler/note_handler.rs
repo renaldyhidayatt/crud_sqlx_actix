@@ -4,6 +4,7 @@ use serde_json::json;
 
 use crate::{
     schema::{CreateNoteSchema, UpdateNoteSchema},
+    service_register::ServiceRegister,
     AppState,
 };
 
@@ -15,7 +16,7 @@ async fn health_checker_handler() -> impl Responder {
 }
 
 #[get("/notes")]
-async fn get_notes(state: web::Data<AppState>) -> impl Responder {
+async fn get_notes(state: web::Data<ServiceRegister>) -> impl Responder {
     let query_result = state.note_service.get_notes().await;
 
     if query_result.is_err() {
@@ -37,7 +38,7 @@ async fn get_notes(state: web::Data<AppState>) -> impl Responder {
 #[post("/notes")]
 async fn create_note_handler(
     body: web::Json<CreateNoteSchema>,
-    state: web::Data<AppState>,
+    state: web::Data<ServiceRegister>,
 ) -> impl Responder {
     let query_result = state
         .note_service
@@ -69,7 +70,7 @@ async fn create_note_handler(
 #[get("/notes/{id}")]
 async fn get_note_handler(
     path: web::Path<uuid::Uuid>,
-    state: web::Data<AppState>,
+    state: web::Data<ServiceRegister>,
 ) -> impl Responder {
     let note_id = path.into_inner();
 
@@ -95,7 +96,7 @@ async fn get_note_handler(
 async fn edit_note_handler(
     path: web::Path<uuid::Uuid>,
     body: web::Json<UpdateNoteSchema>,
-    state: web::Data<AppState>,
+    state: web::Data<ServiceRegister>,
 ) -> impl Responder {
     let note_id = path.into_inner();
 
@@ -107,7 +108,7 @@ async fn edit_note_handler(
             .json(serde_json::json!({"status": "fail","message": message}));
     }
 
-    let note = query_result.unwrap();
+    let _note = query_result.unwrap();
 
     let query_result = state
         .note_service
@@ -137,7 +138,7 @@ async fn edit_note_handler(
 #[delete("/notes/{id}")]
 async fn delete_note_handler(
     path: web::Path<uuid::Uuid>,
-    state: web::Data<AppState>,
+    state: web::Data<ServiceRegister>,
 ) -> impl Responder {
     let note_id = path.into_inner();
 

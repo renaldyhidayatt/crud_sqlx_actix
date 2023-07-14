@@ -15,13 +15,13 @@ use crate::{
     models::UserModel,
     response::FilteredUser,
     schema::{LoginUserSchema, RegisterUserSchema, TokenClaims},
-    AppState,
+    service_register::ServiceRegister,
 };
 
 #[post("/auth/register")]
 async fn register_user_handler(
     body: web::Json<RegisterUserSchema>,
-    data: web::Data<AppState>,
+    data: web::Data<ServiceRegister>,
 ) -> impl Responder {
     let exists = data
         .user_service
@@ -68,7 +68,7 @@ async fn register_user_handler(
 #[post("/auth/login")]
 async fn login_user_handler(
     body: web::Json<LoginUserSchema>,
-    data: web::Data<AppState>,
+    data: web::Data<ServiceRegister>,
 ) -> impl Responder {
     let query_result = data
         .user_service
@@ -151,7 +151,7 @@ async fn logout_handler(_: JwtMiddleware) -> impl Responder {
 #[get("/users/me")]
 async fn get_me_handler(
     req: HttpRequest,
-    data: web::Data<AppState>,
+    data: web::Data<ServiceRegister>,
     _: JwtMiddleware,
 ) -> impl Responder {
     let ext = req.extensions();
