@@ -1,5 +1,7 @@
+use async_trait::async_trait;
 use std::sync::Arc;
 
+use crate::abstract_trait::{DynUserRepository, UserServiceTrait};
 use crate::models::UserModel;
 use crate::repository::UserRepository;
 use sqlx::Error;
@@ -7,15 +9,18 @@ use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct UserService {
-    pub repository: Arc<UserRepository>,
+    pub repository: DynUserRepository,
 }
 
 impl UserService {
-    pub fn new(repository: Arc<UserRepository>) -> Self {
-        UserService { repository }
+    pub fn new(repository: DynUserRepository) -> Self {
+        Self { repository }
     }
+}
 
-    pub async fn create_user(
+#[async_trait]
+impl UserServiceTrait for UserService {
+    async fn create_user(
         &self,
         firstname: &str,
         lastname: &str,
@@ -27,19 +32,19 @@ impl UserService {
             .await
     }
 
-    pub async fn find_by_email_exists(&self, email: &str) -> Result<bool, Error> {
+    async fn find_by_email_exists(&self, email: &str) -> Result<bool, Error> {
         self.repository.find_by_email_exists(email).await
     }
 
-    pub async fn find_user_by_email(&self, email: &str) -> Result<Option<UserModel>, Error> {
+    async fn find_user_by_email(&self, email: &str) -> Result<Option<UserModel>, Error> {
         self.repository.find_by_email(email).await
     }
 
-    pub async fn find_by_id(&self, id: Uuid) -> Result<Option<UserModel>, Error> {
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<UserModel>, Error> {
         self.repository.find_by_id(id).await
     }
 
-    pub async fn update_user(
+    async fn update_user(
         &self,
         email: &str,
         firstname: &str,
@@ -51,7 +56,7 @@ impl UserService {
             .await
     }
 
-    pub async fn delete_user(&self, email: &str) -> Result<bool, Error> {
+    async fn delete_user(&self, email: &str) -> Result<bool, Error> {
         self.repository.delete_user(email).await
     }
 }

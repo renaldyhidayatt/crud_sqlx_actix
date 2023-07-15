@@ -3,6 +3,7 @@ mod handler;
 mod middleware;
 mod response;
 
+mod abstract_trait;
 mod models;
 mod repository;
 mod schema;

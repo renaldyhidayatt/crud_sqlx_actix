@@ -1,4 +1,6 @@
+use crate::abstract_trait::NoteRepositoryTrait;
 use crate::config::ConnectionPool;
+use async_trait::async_trait;
 use chrono::Utc;
 use sqlx::Error;
 use uuid::Uuid;
@@ -10,7 +12,14 @@ pub struct NoteRepository {
 }
 
 impl NoteRepository {
-    pub async fn get_notes(&self) -> Result<Vec<NoteModel>, Error> {
+    pub fn new(db_pool: ConnectionPool) -> Self {
+        Self { db_pool }
+    }
+}
+
+#[async_trait]
+impl NoteRepositoryTrait for NoteRepository {
+    async fn get_notes(&self) -> Result<Vec<NoteModel>, Error> {
         let notes = sqlx::query_as::<_, NoteModel>("SELECT * FROM notes")
             .fetch_all(&self.db_pool)
             .await?;
@@ -18,7 +27,7 @@ impl NoteRepository {
         Ok(notes)
     }
 
-    pub async fn get_note_id(&self, id: Uuid) -> Result<Option<NoteModel>, Error> {
+    async fn get_note_id(&self, id: Uuid) -> Result<Option<NoteModel>, Error> {
         let todo = sqlx::query_as::<_, NoteModel>("SELECT * FROM notes WHERE id = $1")
             .bind(id)
             .fetch_optional(&self.db_pool)
@@ -27,7 +36,7 @@ impl NoteRepository {
         Ok(todo)
     }
 
-    pub async fn create_note(&self, title: &str, content: &str) -> Result<NoteModel, Error> {
+    async fn create_note(&self, title: &str, content: &str) -> Result<NoteModel, Error> {
         let created_at = Utc::now();
         let updated_at = Utc::now();
 
@@ -45,7 +54,7 @@ impl NoteRepository {
         Ok(note)
     }
 
-    pub async fn update_note(
+    async fn update_note(
         &self,
         id: Uuid,
         title: &str,
@@ -66,7 +75,7 @@ impl NoteRepository {
         Ok(note)
     }
 
-    pub async fn delete(&self, id: Uuid) -> Result<(), Error> {
+    async fn delete(&self, id: Uuid) -> Result<(), Error> {
         sqlx::query!(
             r#"
             DELETE FROM notes
