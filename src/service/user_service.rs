@@ -1,9 +1,9 @@
 use async_trait::async_trait;
-use std::sync::Arc;
 
 use crate::abstract_trait::{DynUserRepository, UserServiceTrait};
 use crate::models::UserModel;
-use crate::repository::UserRepository;
+use crate::response::UserSchema;
+
 use sqlx::Error;
 use uuid::Uuid;
 
@@ -26,22 +26,31 @@ impl UserServiceTrait for UserService {
         lastname: &str,
         email: &str,
         password: &str,
-    ) -> Result<UserModel, Error> {
-        self.repository
+    ) -> anyhow::Result<UserSchema> {
+        let user = self
+            .repository
             .create_user(firstname, lastname, email, password)
+            .await?;
+        Ok(user.into())
+    }
+
+    async fn find_by_email_exists(&self, email: &str) -> anyhow::Result<bool> {
+        self.repository
+            .find_by_email_exists(email)
             .await
+            .map_err(|err| err.into())
     }
 
-    async fn find_by_email_exists(&self, email: &str) -> Result<bool, Error> {
-        self.repository.find_by_email_exists(email).await
+    async fn find_user_by_email(&self, email: &str) -> anyhow::Result<Option<UserModel>> {
+        self.repository
+            .find_by_email(email)
+            .await
+            .map_err(|err| err.into())
     }
 
-    async fn find_user_by_email(&self, email: &str) -> Result<Option<UserModel>, Error> {
-        self.repository.find_by_email(email).await
-    }
-
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<UserModel>, Error> {
-        self.repository.find_by_id(id).await
+    async fn find_by_id(&self, id: Uuid) -> anyhow::Result<Option<UserSchema>> {
+        let user = self.repository.find_by_id(id).await?;
+        Ok(user.map(|u| u.into()))
     }
 
     async fn update_user(
@@ -50,13 +59,19 @@ impl UserServiceTrait for UserService {
         firstname: &str,
         lastname: &str,
         password: &str,
-    ) -> Result<Option<UserModel>, Error> {
-        self.repository
+    ) -> anyhow::Result<Option<UserSchema>> {
+        let user = self
+            .repository
             .update_user(email, firstname, lastname, password)
-            .await
+            .await?;
+        Ok(user.map(|u| u.into()))
     }
 
-    async fn delete_user(&self, email: &str) -> Result<bool, Error> {
-        self.repository.delete_user(email).await
+    async fn delete_user(&self, email: &str) -> anyhow::Result<bool> {
+        Ok(self
+            .repository
+            .delete_user(email)
+            .await
+            .expect("Error Delete"))
     }
 }

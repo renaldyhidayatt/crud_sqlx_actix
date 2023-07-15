@@ -12,7 +12,6 @@ use serde_json::json;
 
 use crate::{
     middleware::JwtMiddleware,
-    models::UserModel,
     response::UserSchema,
     schema::{LoginUserSchema, RegisterUserSchema, TokenClaims},
     service_register::ServiceRegister,

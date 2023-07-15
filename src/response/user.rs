@@ -33,9 +33,3 @@ impl From<UserModel> for UserSchema {
 pub struct UserData {
     pub user: UserSchema,
 }
-
-// #[derive(Serialize, Debug)]
-// pub struct UserResponse {
-//     pub status: String,
-//     pub data: UserData,
-// }
