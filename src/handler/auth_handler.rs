@@ -13,7 +13,7 @@ use serde_json::json;
 use crate::{
     middleware::JwtMiddleware,
     models::UserModel,
-    response::FilteredUser,
+    response::UserSchema,
     schema::{LoginUserSchema, RegisterUserSchema, TokenClaims},
     service_register::ServiceRegister,
 };
@@ -53,7 +53,7 @@ async fn register_user_handler(
     match query_result {
         Ok(user) => {
             let user_response = serde_json::json!({"status": "success","data": serde_json::json!({
-                "user": filter_user_record(&user)
+                "user": UserSchema::from(user)
             })});
 
             return HttpResponse::Ok().json(user_response);
@@ -161,7 +161,7 @@ async fn get_me_handler(
 
     match user_result {
         Ok(Some(user)) => {
-            let filtered_user = filter_user_record(&user);
+            let filtered_user = UserSchema::from(user);
 
             let json_response = serde_json::json!({
                 "status": "success",
@@ -188,18 +188,5 @@ async fn get_me_handler(
 
             HttpResponse::InternalServerError().json(json_response)
         }
-    }
-}
-
-fn filter_user_record(user: &UserModel) -> FilteredUser {
-    FilteredUser {
-        id: user.id.to_string(),
-        email: user.email.to_owned(),
-        firstname: user.firstname.to_owned(),
-        lastname: user.lastname.to_owned(),
-
-        role: user.role.to_owned(),
-        createdAt: user.created_at.unwrap(),
-        updatedAt: user.updated_at.unwrap(),
     }
 }

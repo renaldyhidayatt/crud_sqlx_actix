@@ -6,8 +6,7 @@ use uuid::Uuid;
 
 use crate::{
     abstract_trait::{DynNoteRepository, NoteServiceTrait},
-    models::NoteModel,
-    repository::NoteRepository,
+    response::NoteResponse,
 };
 
 #[derive(Clone)]
@@ -20,23 +19,25 @@ impl NoteService {
         Self { repository }
     }
 }
-
 #[async_trait]
 impl NoteServiceTrait for NoteService {
-    // pub fn new(repository: Arc<NoteRepository>) -> Self {
-    //     NoteService { repository }
-    // }
-
-    async fn get_notes(&self) -> Result<Vec<NoteModel>, Error> {
-        self.repository.get_notes().await
+    async fn get_notes(&self) -> anyhow::Result<Vec<NoteResponse>> {
+        let notes = self.repository.get_notes().await?;
+        let note_responses: Vec<NoteResponse> = notes.into_iter().map(|note| note.into()).collect();
+        Ok(note_responses)
     }
 
-    async fn get_note_id(&self, id: Uuid) -> Result<Option<NoteModel>, Error> {
-        self.repository.get_note_id(id).await
+    async fn get_note_id(&self, id: Uuid) -> anyhow::Result<Option<NoteResponse>> {
+        let note = self.repository.get_note_id(id).await?;
+        match note {
+            Some(note) => Ok(Some(note.into())),
+            None => Ok(None),
+        }
     }
 
-    async fn create_note(&self, title: &str, content: &str) -> Result<NoteModel, Error> {
-        self.repository.create_note(title, content).await
+    async fn create_note(&self, title: &str, content: &str) -> anyhow::Result<NoteResponse> {
+        let note = self.repository.create_note(title, content).await?;
+        Ok(note.into())
     }
 
     async fn update_note(
@@ -44,11 +45,16 @@ impl NoteServiceTrait for NoteService {
         id: Uuid,
         title: &str,
         content: &str,
-    ) -> Result<Option<NoteModel>, Error> {
-        self.repository.update_note(id, title, content).await
+    ) -> anyhow::Result<Option<NoteResponse>> {
+        let note = self.repository.update_note(id, title, content).await?;
+        match note {
+            Some(note) => Ok(Some(note.into())),
+            None => Ok(None),
+        }
     }
 
-    async fn delete_note(&self, id: Uuid) -> Result<(), Error> {
-        self.repository.delete(id).await
+    async fn delete_note(&self, id: Uuid) -> anyhow::Result<()> {
+        self.repository.delete(id).await?;
+        Ok(())
     }
 }
